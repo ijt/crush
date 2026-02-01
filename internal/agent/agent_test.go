@@ -10,7 +10,10 @@ import (
 
 	"charm.land/fantasy"
 	"charm.land/x/vcr"
+	"charm.land/catwalk/pkg/catwalk"
+	"charm.land/fantasy/providers/openaicompat"
 	"github.com/charmbracelet/crush/internal/agent/tools"
+	"github.com/charmbracelet/crush/internal/config"
 	"github.com/charmbracelet/crush/internal/message"
 	"github.com/charmbracelet/crush/internal/session"
 	"github.com/stretchr/testify/assert"
@@ -647,6 +650,79 @@ func BenchmarkBuildSummaryPrompt(b *testing.B) {
 			b.ReportAllocs()
 			for range b.N {
 				_ = buildSummaryPrompt(todos)
+			}
+		})
+	}
+}
+
+func TestGetProviderOptions_ReasoningEffortOnlyWhenSupported(t *testing.T) {
+	tests := []struct {
+		name             string
+		reasoningEffort  string
+		reasoningLevels  []string
+		providerType     string
+		expectReasoning  bool
+	}{
+		{
+			name:             "openaicompat with reasoning levels",
+			reasoningEffort:  "medium",
+			reasoningLevels:  []string{"low", "medium", "high"},
+			providerType:     "openai-compat",
+			expectReasoning:  true,
+		},
+		{
+			name:             "openaicompat without reasoning levels",
+			reasoningEffort:  "medium",
+			reasoningLevels:  nil,
+			providerType:     "openai-compat",
+			expectReasoning:  true,
+		},
+		{
+			name:             "hyper with reasoning levels",
+			reasoningEffort:  "medium",
+			reasoningLevels:  []string{"low", "medium", "high"},
+			providerType:     "hyper",
+			expectReasoning:  false, // no case for hyper
+		},
+		{
+			name:             "hyper without reasoning levels",
+			reasoningEffort:  "medium",
+			reasoningLevels:  nil,
+			providerType:     "hyper",
+			expectReasoning:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := Model{
+				ModelCfg: config.SelectedModel{
+					ReasoningEffort: tt.reasoningEffort,
+				},
+				CatwalkCfg: catwalk.Model{
+					ReasoningLevels: tt.reasoningLevels,
+				},
+			}
+			cfg := config.ProviderConfig{
+				Type: catwalk.Type(tt.providerType),
+			}
+
+			options := getProviderOptions(model, cfg)
+
+			// Check if reasoning_effort is present in the options
+			foundReasoning := false
+			if opts, ok := options["openaicompat"]; ok {
+				if parsed, ok := opts.(*openaicompat.ProviderOptions); ok {
+					if parsed.ReasoningEffort != nil {
+						foundReasoning = true
+					}
+				}
+			}
+
+			if tt.expectReasoning {
+				assert.True(t, foundReasoning, "Expected reasoning_effort to be present")
+			} else {
+				assert.False(t, foundReasoning, "Expected reasoning_effort to not be present")
 			}
 		})
 	}

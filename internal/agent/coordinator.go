@@ -246,7 +246,7 @@ func getProviderOptions(model Model, providerCfg config.ProviderConfig) fantasy.
 	switch providerCfg.Type {
 	case openai.Name, azure.Name:
 		_, hasReasoningEffort := mergedOptions["reasoning_effort"]
-		if !hasReasoningEffort && model.ModelCfg.ReasoningEffort != "" {
+		if !hasReasoningEffort && model.ModelCfg.ReasoningEffort != "" && len(model.CatwalkCfg.ReasoningLevels) > 0 {
 			mergedOptions["reasoning_effort"] = model.ModelCfg.ReasoningEffort
 		}
 		if openai.IsResponsesModel(model.CatwalkCfg.ID) {
@@ -279,7 +279,7 @@ func getProviderOptions(model Model, providerCfg config.ProviderConfig) fantasy.
 
 	case openrouter.Name:
 		_, hasReasoning := mergedOptions["reasoning"]
-		if !hasReasoning && model.ModelCfg.ReasoningEffort != "" {
+		if !hasReasoning && model.ModelCfg.ReasoningEffort != "" && len(model.CatwalkCfg.ReasoningLevels) > 0 {
 			mergedOptions["reasoning"] = map[string]any{
 				"enabled": true,
 				"effort":  model.ModelCfg.ReasoningEffort,
@@ -303,7 +303,17 @@ func getProviderOptions(model Model, providerCfg config.ProviderConfig) fantasy.
 		}
 	case openaicompat.Name:
 		_, hasReasoningEffort := mergedOptions["reasoning_effort"]
-		if !hasReasoningEffort && model.ModelCfg.ReasoningEffort != "" {
+		if !hasReasoningEffort && model.ModelCfg.ReasoningEffort != "" && len(model.CatwalkCfg.ReasoningLevels) > 0 {
+			mergedOptions["reasoning_effort"] = model.ModelCfg.ReasoningEffort
+		}
+		parsed, err := openaicompat.ParseOptions(mergedOptions)
+		if err == nil {
+			options[openaicompat.Name] = parsed
+		}
+	case hyper.Name:
+		// Hyper uses openaicompat internally, so same logic
+		_, hasReasoningEffort := mergedOptions["reasoning_effort"]
+		if !hasReasoningEffort && model.ModelCfg.ReasoningEffort != "" && len(model.CatwalkCfg.ReasoningLevels) > 0 {
 			mergedOptions["reasoning_effort"] = model.ModelCfg.ReasoningEffort
 		}
 		parsed, err := openaicompat.ParseOptions(mergedOptions)

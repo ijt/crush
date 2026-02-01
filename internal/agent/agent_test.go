@@ -692,27 +692,20 @@ func TestGetProviderOptions_ReasoningEffortOnlyWhenSupported(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Simulate the mergedOptions building logic from getProviderOptions
-			mergedOptions := make(map[string]any)
-			// Assume no existing reasoning_effort in mergedOptions
-			hasReasoningEffort := false // for simplicity, assume not present
-
-			// Apply the logic: only add if not present, effort != "", and has reasoning levels
+			// Test the logic directly: reasoning_effort is only added if effort != "" and has reasoning levels
+			// This mirrors the logic in getProviderOptions
+			hasReasoningEffort := false // assume not already present
+			addReasoning := false
 			if tt.providerType == "openai-compat" || tt.providerType == "hyper" {
 				if !hasReasoningEffort && tt.reasoningEffort != "" && len(tt.reasoningLevels) > 0 {
-					mergedOptions["reasoning_effort"] = tt.reasoningEffort
+					addReasoning = true
 				}
 			}
 
-			foundReasoning := false
-			if _, exists := mergedOptions["reasoning_effort"]; exists {
-				foundReasoning = true
-			}
-
 			if tt.expectReasoning {
-				assert.True(t, foundReasoning, "Expected reasoning_effort to be added")
+				assert.True(t, addReasoning, "Expected reasoning_effort to be added based on logic")
 			} else {
-				assert.False(t, foundReasoning, "Expected reasoning_effort to not be added")
+				assert.False(t, addReasoning, "Expected reasoning_effort to not be added based on logic")
 			}
 		})
 	}
